@@ -147,6 +147,7 @@ while(t < tk):
     t = t + h
     
 plt.plot(t_plot, w_plot[0], t_plot, w_plot[1], t_plot, w_plot[2])
+
 plt.show()
 """
 double w[6] = {1.0/toRAD,-1.0/toRAD,0, 2.5/toRAD, 1.0/toRAD, -3.5/toRAD},
