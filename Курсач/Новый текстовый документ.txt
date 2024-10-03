@@ -1,0 +1,76 @@
+#include <iostream>
+#include <math.h>
+
+using namespace std;
+
+
+void mult3x1(double* a, double* b, double* c) //матрица 3х3 на вектор 3х1
+{
+    c[0] = a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+    c[1] = a[3] * b[0] + a[4] * b[1] + a[5] * b[2];
+    c[2] = a[6] * b[0] + a[7] * b[1] + a[8] * b[2];
+}
+
+void Trans(double* a, double* b) //Транспонирование матрицы 3х3
+{
+    b[0] = a[0]; b[1] = a[3]; b[2] = a[6];
+    b[3] = a[1]; b[4] = a[4]; b[5] = a[7];
+    b[6] = a[2]; b[7] = a[5]; b[8] = a[8];
+}
+
+int main()
+{
+    double x[3] = {5666.282392, 3512.092276, -1780.014521};
+    double r[3];
+    double MT[9];
+    double agrav[3];
+
+    
+    double JD = 2459761.375;
+    double pi = 3.141592653589793;
+    double M[9];
+    
+    double JD0 = 2451545;
+    double JDD = 36525;
+    double A = -19089.451590;
+    double B = 8640184.812866;
+    double C = 0.093104;
+    double D = -6.2 * pow(10, -6);
+    double DS2R = 7.272205216643039903848712 * pow(10, -5);
+    double time_, f, alfa;
+    time_ = (JD - JD0) / JDD;
+    f = 86400 * fmod(JD, 1.0);
+    alfa = DS2R * ((A + (B + (C + D * time_) * time_) * time_) + f);
+    alfa = fmod(alfa, 2 * pi);      //гринвический угол
+    if (alfa < 0)alfa = alfa + 2 * pi;
+
+    M[0] = cos(alfa);  M[1] = sin(alfa);   M[2] = 0;   //матрица перехода
+    M[3] = -sin(alfa); M[4] = cos(alfa);   M[5] = 0;
+    M[6] = 0;          M[7] = 0;           M[8] = 1;
+    
+
+
+    mult3x1(M, &x[0], r);//перерасчет радиус вектора
+    double rr[3] = { r[0] * 1000, r[1] * 1000, r[2] * 1000 };
+    double R, R0, m, J2, aj2[3];                //возмущающее ускорение
+    R = sqrt(pow(rr[0], 2) + pow(rr[1], 2) + pow(rr[2], 2));
+    R0 = 6378137;
+    J2 = 1.08262668355 * pow(10, -3);
+    m = 3.986004418 * pow(10, 14);
+    
+    double x1 = -1.5 * J2 * m / pow(R,2);
+    double x2 = pow((R0 / R),2);
+    double x3 = (1 - 5 * pow(rr[2] / R, 2)) * (rr[0] / R);
+    
+    aj2[0] = -1.5 * J2 * m / pow(R,2) * pow((R0 / R),2) * ((1 - 5 * pow(rr[2] / R, 2)) * rr[0] / R) / 1000;
+    aj2[1] = -1.5 * J2 * m / pow(R,2) * pow((R0 / R),2) * ((1 - 5 * pow(rr[2] / R, 2)) * rr[1] / R) / 1000;
+    aj2[2] = -1.5 * J2 * m / pow(R,2) * pow((R0 / R),2) * ((1 - 5 * pow(rr[2] / R, 2)) * rr[2] / R) / 1000;
+    
+    cout << "rr0 = "<<aj2[0] << endl;
+    Trans(M, MT);
+    mult3x1(MT, aj2, agrav);
+    
+    cout << agrav[0];
+
+    return 0;
+}

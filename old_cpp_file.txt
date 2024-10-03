@@ -1,0 +1,126 @@
+//---------------------------------------------------------------------------
+#include <vcl.h>
+#include <stdio.h>
+#include <math.h>
+#pragma hdrstop
+
+#include "Unit1.h"
+//---------------------------------------------------------------------------
+#pragma package(smart_init)
+#pragma resource "*.dfm"
+TForm1 *Form1;
+//---------------------------------------------------------------------------
+__fastcall TForm1::TForm1(TComponent* Owner)
+        : TForm(Owner)
+{
+}
+//---------------------------------------------------------------------------
+const double toRAD = 180.0/M_PI;
+//---------------------------------------------------------------------------
+static double J[9]=
+{
+  100, 0,   0,
+  0,   200, 0,
+  0,   0,   150
+};
+//---------------------------------------------------------------------------
+static double Jinv[9]=
+{
+  1.0/100, 0,           0,
+  0,       1.0/200,     0,
+  0,       0,           1.0/150
+};
+//---------------------------------------------------------------------------
+double Ms[3] = {0,0,0};
+double Mv[3] = {0.2,-0.5,0.3};
+//---------------------------------------------------------------------------
+void mvec(double *a, double *b, double *c)
+{
+  // a = a[0], a[1], a[2]
+  // b = b[0], b[1], b[2]
+  c[0] = a[1]*b[2] - a[2]*b[1];
+  c[1] = a[2]*b[0] - a[0]*b[2];
+  c[2] = a[0]*b[1] - a[1]*b[0];
+}
+//---------------------------------------------------------------------------
+void mprd3x1(double *a, double *b, double *c)
+{
+  // a - матрица 3х3, b - вектор 3х1
+   c[0] = a[0]*b[0] + a[1]*b[1] + a[2]*b[2];
+   c[1] = a[3]*b[0] + a[4]*b[1] + a[5]*b[2];
+   c[2] = a[6]*b[0] + a[7]*b[1] + a[8]*b[2];
+}
+//---------------------------------------------------------------------------
+void msub(double *a, double *b, double *c)
+{
+  for(int i=0; i<3; i++)  c[i] = a[i] - b[i];
+}
+//---------------------------------------------------------------------------
+void RightPart(double t, double *w, double *dw)
+{
+   double jw[3], tmp[3], tmp2[3], Msum[3];
+   mprd3x1(J,w,jw);      // Jw
+
+   mvec(w,jw,tmp);       // w x Jw
+   for(int i =0; i<3; i++) Msum[i] = Ms[i] + Mv[i];
+   msub(Msum,tmp,tmp2);    // Ms - (w x Jw)
+   mprd3x1(Jinv,tmp2,dw);   // dw = w`
+   for(int i = 0; i <3; i++) dw[i+3] = w[i];
+
+}
+//---------------------------------------------------------------------------
+void RK4(double t, double *w, double *wk, double h)
+{
+  double k1[6];          RightPart(t,w,k1);
+  double k2[6],k1t[6];
+  for(int i=0; i<6; i++) k1t[i] = w[i] + h*0.5*k1[i];
+                         RightPart(t+h*0.5,k1t,k2);
+  double k3[6],k2t[6];
+  for(int i=0; i<6; i++) k2t[i] = w[i] + h*0.5*k2[i];
+                         RightPart(t+h*0.5,k2t,k3);
+  double k4[6],k3t[6];
+  for(int i=0; i<6; i++) k3t[i] = w[i] + h*k3[i];
+                         RightPart(t+h,k3t,k4);
+
+  for(int i =0; i<6; i++)
+        wk[i] = w[i] + (h/6.0)*(k1[i] + 2.0*(k2[i] + k3[i]) + k4[i]);  
+}
+//---------------------------------------------------------------------------
+void __fastcall TForm1::GO1Click(TObject *Sender)
+{
+   double w[6] = {1.0/toRAD,-1.0/toRAD,0, 2.5/toRAD, 1.0/toRAD, -3.5/toRAD},
+                  wk[6], h = 0.01, t = 0, tk = 150;
+
+   double Kfi = 20, Kw = 40, Ki = 1.0;
+
+   double fi_tr[3] = {0/toRAD, -0/toRAD, 0/toRAD};
+   double in[3] = {0,0,0};
+
+   FILE *f = fopen("res.csv","w");
+
+   while(t < tk)
+   {
+     RK4(t, w, wk, h);
+     for(int i =0; i<6; i++)    w[i] = wk[i];
+
+     for(int i =0; i<3; i++)
+     {
+        in[i] = in[i] +(w[i+3] - fi_tr[i])*h;
+        Ms[i] = -(Kfi*(w[i+3] - fi_tr[i]) + Kw*w[i] + Ki*in[i]);
+     }
+
+     fprintf(f,"%lf;%lf;%lf;%lf;%lf;%lf;%lf\n",
+             t, w[0]*toRAD, w[1]*toRAD, w[2]*toRAD,
+             w[3]*toRAD, w[4]*toRAD, w[5]*toRAD);
+     //Application->ProcessMessages();
+
+     t = t + h;
+   }
+
+   fclose(f);
+
+}
+
+
+//---------------------------------------------------------------------------
+
