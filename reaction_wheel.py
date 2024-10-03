@@ -1,9 +1,7 @@
 import logging
-import numpy as np
 
-from math import pi, cos, sin, asin, sqrt
+from math import pi, cos, sin, sqrt
 import matplotlib.pyplot as plt
-from textwrap import indent
 
 
 logging.basicConfig(
@@ -91,7 +89,7 @@ def right_part(t, w):
     
     jw = mult_matrix_vec(J, w[:3])
     for i in range(3):
-        Om[i] += Ms[i]/Idm
+        Om[i] = Ms[i]/Idm
         I_Om.append(Idm * Om[i])
         tmp4.append(jw[i] + I_Om[i])
 
@@ -163,10 +161,10 @@ w_plot = {
 
 t_plot = []
 
-w = [0.15/toRAD, 0, 0, 1, 0, 0, 0]
+w = [1.0/toRAD, 0, 0, 1, 0, 0, 0]
 h = 0.01
 t = 0
-tk = 7200
+tk = 1200
 Kfi = 20
 Kw = 40
 Ki = 1.0
@@ -179,9 +177,9 @@ In = [0, 0, 0]
 #q = [cos(angle), e[0] * sin(angle), e[1] * sin(angle), e[2] * sin(angle)] # Кватернион который хотим занять
 
 
-e = [0, 0, 0] #орт вектора вокруг которого хотим повернуться
+e = [0.7071, 0, -0.7071] #орт вектора вокруг которого хотим повернуться
 angle = 20/toRAD
-q = [1, 0, 0, 0]
+q = [cos(angle), sin(angle), 0, 0]
 
 #logging.info(w[0])
 
@@ -216,12 +214,7 @@ while(t < tk):
                 Ms[i] = Ms_max * sign(Ms[i])  #предельное ускорение ДМ
             if abs(Om[i]) >= Om_max:
                 Ms[i] = 0
-                #logging.info(f't = {t} уперлись')
-    
-    
-    
-    #print(t, w[0]*toRAD, w[1]*toRAD, w[2]*toRAD, w[3]*toRAD, w[4]*toRAD, w[5]*toRAD)
-    
+        
     t_plot.append(t)
     
     w_plot['dwx'].append(w[0])

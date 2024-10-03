@@ -163,3 +163,4 @@ cython_debug/
 
 .project
 .pydevproject
+README_local.md
