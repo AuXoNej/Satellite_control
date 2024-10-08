@@ -1,21 +1,34 @@
+import matplotlib.pyplot as plt
 import logging
 
-from math import pi, cos, sin, sqrt
-import matplotlib.pyplot as plt
+from math import cos, pi, sin, sqrt
 
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
+    level=logging.ERROR
 )
 
 CONSTANTS = {
-    'toRAD': 180/pi,   
+    'TO_RAD': 180/pi,
+    'J':[
+        [100, 0, 0],
+        [0, 200, 0],
+        [0, 0, 150]
+    ],
+    'Jinv':[
+        [1/100, 0, 0],
+        [0, 1/200, 0],
+        [0, 0, 1/150]
+    ],
+    'Idm': 0.00016,
+    'MS_MAX': 0.05,
+    'OM_MAX': 600,
 }
 
-toRAD = 180/pi
+TO_RAD = 180/pi
 
-J= [
+J = [
     [100, 0, 0],
     [0, 200, 0],
     [0, 0, 150]
@@ -28,94 +41,152 @@ Jinv = [
 
 Idm = 0.00016
 Om = [0, 0, 0]
-Ms_max = 0.05
-Om_max = 600
+MS_MAX = 0.05
+OM_MAX = 600
 
-Ms = [0,0,0]
+Ms = [0, 0, 0]
 Mv = [0, 0, 0]  #[0.2,-0.5,0.3]
 
-def sign(x):
-    if x == 0:
-        return 0
-    elif x > 0:
-        return 1
-    return -1
-
-
-def cross_prod_vec(vec_1, vec_2):
-    """ a = [a[0], a[1], a[2]]  b = [b[0], b[1], b[2]] """
+class Math_Calc():
+    def sign(x):
+        try:
+            if x == 0:
+                return 0
+            elif x > 0:
+                return 1
+            return -1
+        except Exception as error:
+            logging.error(f'Ошибка выполнения sign(): {error}')
+            raise error
     
-    return [
-        vec_1[1]*vec_2[2] - vec_1[2]*vec_2[1],
-        vec_1[2]*vec_2[0] - vec_1[0]*vec_2[2],
-        vec_1[0]*vec_2[1] - vec_1[1]*vec_2[0]
-    ]
-
-def mult_matrix_vec(matr, vec):
-    #Входные параметры не проверяются. Память под вектор R должна быть выделена. Вектор R должен иметь число элементов равное числу строк матрицы A. 
-    #Вектор B должен иметь число элементов равное числу столбцов матрицы A.
-    if len(matr) != len(vec):
-        logging.error(f'def mult_matrix_vec(): некорректные входные данные (matr = {matr}, vec = {vec})')
-        raise ValueError(f'Некорректные входные данные: вектор должен иметь число элементов равное числу столбцов матрицы')
-    res = []
-    for row in range(len(matr)):
-        tmp = 0
-        for col in range(len(vec)):
-            tmp += matr[row][col] * vec[col]
-        res.append(tmp)
+    def mult_prod_vec3(vec_1, vec_2):
+        """ Векторное произведение трехмерных векторов """
+        
+        if len(vec_1) != len(vec_2) != 3:
+            logging.error(
+                f'Ошибка выполнения mult_prod_vec3(): ' 
+                f'векторы должны быть трехмерные'
+            )
+            raise ValueError(
+                f'Некорректные входные данные: '
+                f'векторы должны быть трехмерные'
+            )
+        try:
+            return [
+                vec_1[1]*vec_2[2] - vec_1[2]*vec_2[1],
+                vec_1[2]*vec_2[0] - vec_1[0]*vec_2[2],
+                vec_1[0]*vec_2[1] - vec_1[1]*vec_2[0]
+            ]
+        except Exception as error:
+            logging.error(f'Ошибка выполнения mult_prod_vec3(): {error}')
+            
+            raise error
     
-    return res
-
-def div_vec(vec_1, vec_2):
-    vec = []
+    def mult_matrix_vec(matr, vec):
+        """ Произведение матрицы на вектор """
     
-    for i in range(len(vec_1)):
-        vec.append(vec_1[i] - vec_2[i])
+        if len(matr) != len(vec):
+            logging.error(
+                f'Ошибка выполнения mult_matrix_vec(): '
+                f'некорректные входные данные '
+                f'вектор должен иметь число элементов '
+                f'равное числу столбцов матрицы\n'
+                f'(matr = {matr}, vec = {vec})'
+            )
     
-    return vec
-
-def quatmul(quat1, quat2):
-    return[
-        quat1[0] * quat2[0] - quat1[1] * quat2[1] - quat1[2] * quat2[2] - quat1[3] * quat2[3],
-        quat1[0] * quat2[1] + quat1[1] * quat2[0] + quat1[3] * quat2[2] - quat1[2] * quat2[3],
-        quat1[0] * quat2[2] + quat1[2] * quat2[0] + quat1[1] * quat2[3] - quat1[3] * quat2[1],
-        quat1[0] * quat2[3] + quat1[3] * quat2[0] + quat1[2] * quat2[1] - quat1[1] * quat2[2]
-    ]
+            raise ValueError(
+                f'Некорректные входные данные: '
+                f'вектор должен иметь число элементов '
+                f'равное числу столбцов матрицы'
+            )
+        
+        try:
+            res = []
+            for row in range(len(matr)):
+                tmp = 0
+                for col in range(len(vec)):
+                    tmp += matr[row][col] * vec[col]
+                res.append(tmp)
+        
+            return res
+        except Exception as error:
+            logging.error(
+                f'Ошибка выполнения mult_matrix_vec(): '
+                f'{error}'
+            )
+            raise error
+    
+    def div_vec(vec_1, vec_2):
+        """ Разность векторов """
+        
+        if len(vec_1) != len(vec_2):
+            logging.error(
+                f'Ошибка выполнения div_vec(): '
+                f'разная размерость векторов')
+    
+            raise ValueError(
+                f'Некорректные входные данные: '
+                f'разная размерность векторов'
+            )
+    
+        try:
+            vec = []
+            
+            for i in range(len(vec_1)):
+                vec.append(vec_1[i] - vec_2[i])
+            
+            return vec
+        except Exception as error:
+            logging.error(
+                f'Ошибка выполнения div_vec(): '
+                f'{error}'
+            )
+            raise error
+    
+    def quatmul(quat1, quat2):
+        try:
+            return[
+                quat1[0] * quat2[0] - quat1[1] * quat2[1] - quat1[2] * quat2[2] - quat1[3] * quat2[3],
+                quat1[0] * quat2[1] + quat1[1] * quat2[0] + quat1[3] * quat2[2] - quat1[2] * quat2[3],
+                quat1[0] * quat2[2] + quat1[2] * quat2[0] + quat1[1] * quat2[3] - quat1[3] * quat2[1],
+                quat1[0] * quat2[3] + quat1[3] * quat2[0] + quat1[2] * quat2[1] - quat1[1] * quat2[2]
+            ]
+        except Exception as error:
+            logging.error(
+                f'Ошибка выполнения quatmul(): '
+                f'{error}'
+            )
+            raise error
 
 def right_part(t, w):
     Msum = []
     I_Om = []
     tmp4 = []
     
-    jw = mult_matrix_vec(J, w[:3])
+    jw = Math_Calc.mult_matrix_vec(CONSTANTS['J'], w[:3])
+
     for i in range(3):
-        Om[i] = Ms[i]/Idm
-        I_Om.append(Idm * Om[i])
+        I_Om.append(CONSTANTS['Idm'] * Om[i])
         tmp4.append(jw[i] + I_Om[i])
 
-    tmp = cross_prod_vec(w, tmp4)
+    tmp = Math_Calc.mult_prod_vec3(w, tmp4)
     
     for i in range(3):
         Msum.append(Mv[i] + Ms[i])
         
         
-    tmp2 = div_vec(Msum, tmp)
-    dw = mult_matrix_vec(Jinv, tmp2)
-    
-#    for i in range(3):
-#        dw.append(w[i])            # Это если fi_tck = omega
-    
-#    for(int i = 0; i <3; i++) dw[i+3] = w[i];
+    tmp2 = Math_Calc.div_vec(Msum, tmp)
+    dw = Math_Calc.mult_matrix_vec(CONSTANTS['Jinv'], tmp2)
 
     Lw = [0, w[0], w[1], w[2]]
-    
-    tmp3 = quatmul(w[3:], Lw)
-    
-    for i in range(len(tmp3)):
-        dw.append(tmp3[i])
+        
+    dw += Math_Calc.quatmul(w[3:], Lw)
         
     for i in range(4):
         dw[3 + i] *= 0.5 
+    
+    for i in range(3):
+        Om[i] = -Ms[i]/Idm
     
     #logging.info(dw)
     
@@ -147,113 +218,97 @@ def RK4(t, w, h):
         wk.append(w[i] + (h/6.0)*(k1[i] + 2.0*(k2[i] + k3[i]) + k4[i]))
         
     return wk
+
+def main():
+    w_plot = {
+        'dwx': [],
+        'dwy': [],
+        'dwz': [],
+        'q0': [],
+        'qx': [],
+        'qy': [],
+        'qz': [],
+    }
     
-
-w_plot = {
-    'dwx': [],
-    'dwy': [],
-    'dwz': [],
-    'q0': [],
-    'qx': [],
-    'qy': [],
-    'qz': [],
-}
-
-t_plot = []
-
-w = [1.0/toRAD, 0, 0, 1, 0, 0, 0]
-h = 0.01
-t = 0
-tk = 1200
-Kfi = 20
-Kw = 40
-Ki = 1.0
-
-#fi_tr = [0/toRAD, -0/toRAD, 0/toRAD]
-In = [0, 0, 0]
-
-#e = [0.7071, 0, -0.7071] #орт вектора вокруг которого хотим повернуться
-#angle = 20/toRAD
-#q = [cos(angle), e[0] * sin(angle), e[1] * sin(angle), e[2] * sin(angle)] # Кватернион который хотим занять
-
-
-e = [0.7071, 0, -0.7071] #орт вектора вокруг которого хотим повернуться
-angle = 20/toRAD
-q = [cos(angle), sin(angle), 0, 0]
-
-#logging.info(w[0])
-
-
-while(t < tk):
-    wk = RK4(t, w, h)
-    for i in range(7):
-        w[i] = wk[i]
+    t_plot = []
+    
+    w = [
+        1.0/CONSTANTS['TO_RAD'], 0, 0,
+        1, 0, 0, 0
+    ]                   # Начальные условия (dwx, dwy, dwz, quat[4])
+    h = 0.01            # Шаг
+    t = 0               # Начальное время
+    tk = 400            # Конечное время
+    Kfi = 20
+    Kw = 40
+    Ki = 1.0
+    
+    In = [0, 0, 0]
+    
+    #e = [0.7071, 0, -0.7071]             # Орт вектора вокруг которого хотим повернуться
+    #angle = 30/TO_RAD                    # Угол на который хотим повернуть / 2
+    #q = [cos(angle), e[0]*sin(angle), e[1]*sin(angle), e[2]*sin(angle)]   # Кватернион который хотим занять
+    
+    e = [1, 0, 0]             
+    q = [1, 0, 0, 0]
+    
+    logging.info(w[0])
+    
+    while(t < tk):
+        wk = RK4(t, w, h)
+        for i in range(7):
+            w[i] = wk[i]
+            
         
-    
-    dl_q = sqrt(w[3]**2 + w[4]**2 + w[5]**2 + w[6]**2)  #
-    for i in range(len(w[3:])):                         # Нормировка кватерниона
-        w[3 + i] /= dl_q                                #
-    
-    qs = [q[0], -q[1], -q[2], -q[3]]
-    dL = quatmul(qs, w[3:])
-    
-    #logging.info(f't = {t} - dwx = {w[0]}  qz = {w[6]}')
-    
-    
-    for i in range(3):
-        #In[i] = In[i] +(w[i+3] - fi_tr[i])*h
-        #Ms[i] = -(Kfi*(w[i+3] - fi_tr[i]) + Kw*w[i] + Ki*In[i])
+        dl_q = sqrt(w[3]**2 + w[4]**2 + w[5]**2 + w[6]**2)  #
+        for i in range(len(w[3:])):                         # Нормировка кватерниона
+            w[3 + i] /= dl_q                                #
         
-        #In[i] = In[i] + 2 * sign(dL[0]) * dL[1 + i] * h
-        #Ms[i] = -(Kfi * 2 * sign(dL[0]) * dL[1 + i] + Kw * w[i] + Ki*In[i])
+        qs = [q[0], -q[1], -q[2], -q[3]]
+        dL = Math_Calc.quatmul(qs, w[3:])
         
-        Ms[i] = -(Kfi * 2 * sign(dL[0]) * dL[1 + i] + Kw * w[i])
+        #logging.info(f't = {t} - dwx = {w[0]}  qz = {w[6]}')
         
-        for i in range(len(Ms)):
-            if abs(Ms[i]) >= Ms_max:
-                Ms[i] = Ms_max * sign(Ms[i])  #предельное ускорение ДМ
-            if abs(Om[i]) >= Om_max:
-                Ms[i] = 0
         
-    t_plot.append(t)
-    
-    w_plot['dwx'].append(w[0])
-    w_plot['dwy'].append(w[1])
-    w_plot['dwz'].append(w[2])
-    w_plot['q0'].append(w[3])
-    w_plot['qx'].append(w[4])
-    w_plot['qy'].append(w[5])
-    w_plot['qz'].append(w[6])
-    
-    
-
-    #//Application->ProcessMessages();
-    
-    t = t + h
-
-output = f'{t_plot[-1]} '
-
-#print(t, end=' ')
-for key in w_plot.keys():
-    #print(w_plot[key][-1], end=' ')
-    output += f'{w_plot[key][-1]}'
-    
-logging.info(output)
-
-output = f'{t_plot[0]} '
-
-for key in w_plot.keys():
-    output += f'{w_plot[key][0]}'
-
-logging.info(output)
-
+        for i in range(3):
+            
+            Ms[i] = -(Kfi * 2 * Math_Calc.sign(dL[0]) * dL[1 + i] + Kw * w[i])
+            
+            for i in range(len(Ms)):
+                if abs(Ms[i]) >= MS_MAX:
+                    Ms[i] = MS_MAX * Math_Calc.sign(Ms[i])  #предельное ускорение ДМ
+                if abs(Om[i]) >= OM_MAX:
+                    Ms[i] = 0
+            
+        t_plot.append(t)
         
-plt.plot(
-    t_plot, w_plot['q0'], 'red',
-    t_plot, w_plot['qx'], 'green',
-    t_plot, w_plot['qy'], 'blue',
-    t_plot, w_plot['qz'], 'black'
-)
-#plt.plot(t_plot, w_plot['dwx'])
-plt.grid()
-plt.show()
+        w_plot['dwx'].append(w[0])
+        w_plot['dwy'].append(w[1])
+        w_plot['dwz'].append(w[2])
+        w_plot['q0'].append(w[3])
+        w_plot['qx'].append(w[4])
+        w_plot['qy'].append(w[5])
+        w_plot['qz'].append(w[6])
+        
+        t = t + h
+    
+    output = f't = {t_plot[-1]} '
+    for key in w_plot.keys():
+        output += f'{key} = {w_plot[key][-1]} '
+    
+    logging.info(f'{output}')
+    
+    plt.plot(
+        t_plot, w_plot['q0'], 'red',
+        t_plot, w_plot['qx'], 'green',
+        t_plot, w_plot['qy'], 'blue',
+        t_plot, w_plot['qz'], 'black'
+    )
+    
+    plt.grid()
+    plt.show()
+
+
+if __name__ == '__main__':
+    
+    main()
